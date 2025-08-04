@@ -1,0 +1,22 @@
+{{- if eq .Values.platform "cats" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.namespace }}-tool-server
+  namespace: {{ .Values.namespace }}
+  annotations:
+    lilly.com/oauth_token_headers: '{"Lilly-Authorization": "user.read email openid profile email GroupMember.Read.All Group.Read.All User.Read User.Read.All Files.ReadWrite.All Sites.Read.All Sites.ReadWrite.All Group.ReadWrite.All GroupMember.ReadWrite.All"}'
+    lilly.com/user_info_headers: '[{"attribute": "email", "header": "X-USER"},  {"attribute": "id", "header": "X-ID"}, {"attribute": "name", "header": "X-NAME"}, {"attribute": "email", "header": "X-EMAIL"}, {"attribute": "groups", "header": "X-GROUPS"}, {"attribute": "org-tree", "header": "X-ORG"}]'
+spec:
+  rules:
+    - host: tool-server.{{ .Values.namespace }}.{{ .Values.toolServer.domain }}
+      http:
+        paths:
+          - path: "/"
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.namespace }}-tool-server
+                port:
+                  number: {{ .Values.toolServer.port }}
+{{- end }}

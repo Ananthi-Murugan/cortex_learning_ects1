@@ -1,0 +1,153 @@
+syntax = "proto3";
+import "google/protobuf/struct.proto";
+package toolv2;
+
+// Service containing all tools within our toolkit, and methods to interact with them.
+service Toolkit {
+    /*
+    Sends list of all tools with names and descriptions
+
+    This function must be implemented by the GRPC tool server.  It should not do any significant
+    processing as this is called for each toolkit provider associated with a model when a query
+    is executed.  Expecation is this function should execute in <100ms
+    */
+    rpc DescribeTools(DescribeRequest) returns (ToolList);
+
+    /* 
+    Executes a requested tool by name and params, and responds.
+
+    This function must be implemented by the GRPC tool server.  It can perform any computation needed
+    to translate the tool request to a tool response.
+
+    Expecation is this function should execute in <1min
+    */
+    rpc ExecuteTool(ToolRequestV2) returns (ToolResponseV2);
+}
+
+// Message sent to tool provider to list what tools are avialble to the given user
+message DescribeRequest {
+    /* 
+    Toolkit config in Cortex that is associated with the request from Cortex.
+    IMPORTANT: if you wish to restrict access, your tool server should check the provided source toolkit & verify
+    the source toolkit calling is expected to call.  If this tool server can be used by any config in Cortex, this param can be ignored.
+    */
+    string source_toolkit = 1;
+    
+    // The authenticated user that is making the request
+    Auth auth = 2;
+}
+
+// Message response from tool provider containing a list of tools served by this provider for the given toolkit/user
+message ToolList {
+    
+    // List of tools
+    repeated AgentTool tools = 1;
+}
+
+// Definition of a single action which can be taken by the LLM agent
+message AgentTool {
+    
+    // Name of the tool.  This is used by LLM to identify the tool.
+    string name = 1;
+    
+    // Prompt Description which is used by the LLM to decide which tool(s) to call for a given question
+    string description = 2;
+    
+    // Flag to end LLM decision loop & immediately return results to the user.
+    bool direct_return = 3;
+    
+    // Human description of what this tool does (not used by the LLM)
+    optional string short_description = 4;
+    
+    // JSON schema describing the input to this tool (see https://json-schema.org/docs)
+    optional string json_input_schema = 5;
+
+    // Optional prompt which if specified is used as additional instructions to LLM to format
+    // inputs to the tool input.
+    optional string input_transformation_prompt = 6;
+    
+    // JSON schema describing the output returned by this tool (see https://json-schema.org/docs)
+    optional string json_output_schema = 7;
+    
+    // Free field of labels which can be applied to this tool & used for discovery/classification of tools.
+    map<string,string> labels = 8;
+}
+
+// Call to execute a given agent tool with specified parameters
+message ToolRequestV2 {
+    
+    // Name of the tool as defined in AgentTool spec above
+    string name = 1;
+    
+    // Input blob, if JSON input schema is defined, this will be a JSON object matching the schema specified
+    string input = 2;
+
+    // User context values (for backward compatibility, this will be deprecated)
+    map<string, google.protobuf.Value> user_context = 3;
+    
+    /* 
+    Toolkit config in Cortex that is associated with the request from Cortex.
+    IMPORTANT: if you wish to restrict access, your tool server should check the provided source toolkit & verify
+    the source toolkit calling is expected to call.  If this tool server can be used by any config in Cortex, this param can be ignored.
+    */
+    optional string source_toolkit = 4;
+    
+    // The authenticated user that is making the request
+    Auth auth = 5;
+
+    /* 
+    Attached data not included in the main input (use for large data multi model file inputs)
+    */
+    repeated Attachment attachments = 6;
+}
+
+// Metadata describing the authenticated user & providing downstream authentication tokens, passed from Cortex
+message Auth {
+    
+    // User UPN as returned by the authentication source (can be Azure user UPN, AWS Role, Azure client ID, etc.)
+    string user_upn = 1;
+    
+    // Set of name & entra id access tokens for downstream systems.  The names & token values provided here are defined in the Toolkit config in Cortex when registering the tool provider.
+    map<string, string> access_tokens = 2;
+    
+    // User context values (for backward compatibility)
+    map<string, google.protobuf.Value> user_context = 3;
+}
+
+// Response from the agent tool
+message ToolResponseV2 {
+    
+    // Output returned by the agent tool, if JSON output schema is defined in the AgentTool definition, this must be a JSON object matching the schema specified
+    string output = 1;
+    
+    // Additional action commands to be sent back to the LLM decision engine in Cortex
+    repeated Command commands = 2;
+    
+    /* 
+    Attached data not included in the main output spec (use for large data responses)
+    */
+    repeated Attachment attachments = 3;
+}
+
+// Additional large file output associated with a tool response.
+message Attachment {
+    
+    // File name for the attachment
+    string name = 1;
+    
+    // Link (e.g. can be presigned S3 URL or other link where data can be fetched with a GET request to the provided URL)
+    string link = 2;
+
+    // Metadata about the file.  This is provided to the LLM as a prompt to describe the contents of the file, how it can be used, etc.
+    string description = 3;
+}
+
+// FUTURE (not currently implemented): A instruction returned to the LLM decision engine
+message Command {
+    
+    // Instruction name
+    string command = 1;
+    
+    // Instruction value
+    string data = 2;
+}

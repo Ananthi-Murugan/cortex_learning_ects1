@@ -1,0 +1,21 @@
+{{- if ne .Values.environment "local" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.namespace }}-tool-server
+  {{- if ne .Values.platform "kubed" }}
+  namespace: {{ .Values.namespace }}
+  {{- end }}
+spec:
+  ports:
+    - port: {{ .Values.toolServer.port }}
+      {{- if eq .Values.platform "cats" }}
+      targetPort: {{ .Values.toolServer.port }}
+      protocol: TCP
+      {{- end }}
+      {{- if eq .Values.platform "kubed" }}
+      appProtocol: http
+      {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ .Values.namespace }}-tool-server
+{{- end }}

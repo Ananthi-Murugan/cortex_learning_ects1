@@ -1,0 +1,22 @@
+{{- if ne .Values.platform "kubed" }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace }}
+  {{- if ne .Values.environment "local" }}
+  labels:
+    cost-center: {{ .Values.costCenter | quote }}
+  {{- if eq .Values.platform "cats" }}
+  annotations:
+    app.lrl.lilly.com/compute: hybrid
+    app.lilly.com/argo.automated: 'true'
+    app.lilly.com/argo.config: |-
+      {
+        "roles": {
+          "readADGroups": [ "AADS_Team", "global_research_it_all", "lilly_kubed_core", "lrl_cats_access_non_rids", "SPE_Research_Global_Cherba" ],
+          "adminADGroups": [ "aws_light_devs" ]
+        }
+      }
+  {{- end }}
+  {{- end }}
+{{- end }}
