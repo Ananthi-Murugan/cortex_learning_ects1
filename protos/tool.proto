@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package tool;
+
+// Service containing all tools within our toolkit, and methods to interact with them.
+service Toolkit {
+    // Sends list of all tools with names and descriptions
+    rpc DescribeTools(DescribeRequest) returns (ToolList);
+
+    // Executes a requested tool by name and params, and responds
+    rpc ExecuteTool(ToolRequest) returns (ToolResponse);
+}
+
+message DescribeRequest {}
+
+// List of AgentTools returned on a DescribeTools rpc
+message ToolList {
+    repeated AgentTool tools = 1;
+}
+
+// Definition of a single tool
+message AgentTool {
+    string name = 1; // Name of the tool should be unique. A meaningful name will help the agent better identify the tool.
+    string description = 2; // Description that is read by an agent to understand the tool. Should identify necessary inputs, outputs, restraints, etc. to the agent.
+    bool direct_return = 3; // Should be false by default. If true, the agent will forcefully finish and return the output of this tool.
+}
+
+// Request sent during a ExecuteTool rpc
+message ToolRequest {
+    string name = 1; // Name of the tool to execute
+    string params = 2; // String input from the agent into the tool
+}
+
+// Response returned by ExecuteTool rpc
+message ToolResponse {
+    string message = 1; // The main output of the requested tool. Agent will use it to form a reply or run more tools. 
+    repeated Command commands = 2; // An optional list of Commands that are returned in the final agent response
+}
+
+// A Command is sent to the agent and all commands sent during an agent's run cycle will be directly returned as metadata in the Cortex model response.
+// This is useful for creating custom functions that an agent can initiate but not directly run, such as database writes.
+// The command parameters are very flexible to allow for variety of use cases.
+message Command {
+    string command = 1; // Name of the command
+    string data = 2; // Data relevant to the command
+}

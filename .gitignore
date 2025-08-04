@@ -1,0 +1,14 @@
+# python
+**/.venv
+**/__pycache__
+
+# aws
+.aws
+
+# proto
+**/protos/*.py
+**/protos/*.pyi
+
+
+# tmp workflows
+.github
