@@ -1,0 +1,17 @@
+namespace: cortex-tool-template
+environment: prod
+costCenter: "7050267"
+platform: cats
+registry: 283234040926.dkr.ecr.us-east-2.amazonaws.com
+
+aws:
+  securityGroups:
+    - sg-0fc1ecf123aa058f0
+
+toolServer:
+  name: cortex-tool-template
+  port: 5000
+  domain: apps.lrl.lilly.com
+  prefix: tool-server
+  branch: main
+  initialSha: 563bef6

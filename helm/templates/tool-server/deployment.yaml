@@ -1,0 +1,61 @@
+{{- if ne .Values.environment "local" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.namespace }}-tool-server
+  {{- if ne .Values.platform "kubed" }}
+  namespace: {{ .Values.namespace }}
+  {{- end }}
+  {{- if eq .Values.platform "cats" }}
+  annotations:
+    app.lilly.com/flux.automated: "true"
+    app.lilly.com/flux.simple.{{ .Values.toolServer.name }}: "283234040926;{{ .Values.toolServer.name }};glob:{{ .Values.toolServer.name }}-{{ .Values.toolServer.branch }}-sha-.*"
+    wave.pusher.com/update-on-config-change: "true"
+  {{- end }}
+  {{- if eq .Values.platform "kubed" }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.namespace }}-tool-server
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.namespace }}-tool-server
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ .Values.namespace }}-tool-server
+        {{- if eq .Values.platform "cats" }}
+        app.lrl.lilly.com/compute: serverless
+        {{- end }}
+      annotations:
+        {{- if eq .Values.platform "kubed" }}
+        sidecar.istio.io/inject: "true"
+        {{- end }}
+        {{- if eq .Values.platform "cats" }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ .Values.toolServer.port | quote }}
+        prometheus.io/path: "metrics"
+        {{- end }}
+    spec:
+      containers:
+        - name: {{ .Values.namespace }}-tool-server
+          {{- if eq .Values.platform "kubed" }}
+          image: {{ .Values.registry }}/{{ $.Values.toolServer.name }}:{{ .Values.toolServer.branch }}-sha-{{ .Values.toolServer.initialSha }}
+          {{- else }}
+          image: {{ .Values.registry }}/{{ .Values.toolServer.name }}:{{ .Values.toolServer.name }}-{{ .Values.toolServer.branch }}-sha-{{ .Values.toolServer.initialSha }} # {"$imagepolicy": "{{ .Values.namespace }}:{{ .Values.toolServer.name }}"}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.toolServer.port }}
+          resources:
+            limits:
+              memory: 1Gi
+              cpu: '1'
+            requests:
+              memory: 500Mi
+              cpu: 500m
+      {{- if eq .Values.platform "kubed" }}
+      imagePullSecrets:
+        - name: jfrog-artifactory-creds
+      {{- end }}
+{{- end }}

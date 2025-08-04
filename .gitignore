@@ -1,0 +1,14 @@
+# python
+**/.venv
+**/__pycache__
+.ruff_cache
+
+# aws
+.aws
+
+# proto
+**/protos/*.py
+**/protos/*.pyi
+
+# templates output
+helm/cortex-tool-template
